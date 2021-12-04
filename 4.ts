@@ -1,9 +1,9 @@
 class Board {
+  private static WIDTH = 5;
+  private static HEIGHT = 5;
   private pos: { [num: string]: string };
   private num: { [pos: string]: string };
   private marked: Set<string>;
-  private static WIDTH = 5;
-  private static HEIGHT = 5;
 
   public constructor(boardStr: string) {
     this.num = {};
@@ -59,11 +59,13 @@ class Board {
     }
     return false;
   }
-  public score(): number {
-    return Object.values(this.pos)
-      .filter((pos) => !this.marked.has(pos))
-      .map((pos) => this.num[pos])
-      .reduce((acc, num) => acc + parseInt(num), 0);
+  public score(number: number): number {
+    return (
+      Object.values(this.pos)
+        .filter((pos) => !this.marked.has(pos))
+        .map((pos) => this.num[pos])
+        .reduce((acc, num) => acc + parseInt(num), 0) * number
+    );
   }
 }
 
@@ -77,7 +79,7 @@ const bingoScore = (numbers: string[], boards: Board[]): number => {
     for (const board of boards) {
       const isBingo = board.mark(n);
       if (isBingo) {
-        return board.score() * parseInt(n);
+        return board.score(parseInt(n));
       }
     }
   }
@@ -94,9 +96,8 @@ const lastBingoScore = (numbers: string[], boards: Board[]): number => {
       if (!winners.includes(i)) {
         const isBingo = board.mark(n);
         if (isBingo) {
-          const score = board.score() * parseInt(n);
           winners.push(i);
-          winnerScores.push(score);
+          winnerScores.push(board.score(parseInt(n)));
         }
       }
     });
