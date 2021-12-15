@@ -2,31 +2,76 @@ type Rules = {
   [target: string]: string;
 };
 type ElemCount = { [elem: string]: number };
+type PairCount = { [pair: string]: number };
 
-function elemCount(polymer: string): ElemCount {
-  return polymer.split('').reduce((acc: ElemCount, c) => {
-    if (acc[c] === undefined) {
-      acc[c] = 0;
-    }
-    ++acc[c];
-    return acc;
-  }, {});
+function score(elemCount: ElemCount): number {
+  const counts = Object.values(elemCount).sort((a, b) => a - b);
+  return counts[counts.length - 1] - counts[0];
 }
 
-function applyStep(polymer: string, rules: Rules): string {
-  const res = [];
-
-  for (let i = 0; i < polymer.length - 1; ++i) {
-    const pair = polymer.slice(i, i + 2);
-    const insert = rules[pair];
-
-    res.push(polymer[i]);
-    if (insert !== undefined) {
-      res.push(insert);
-    }
+function countElems(
+  pairCount: PairCount,
+  firstElem: string,
+  lastElem: string
+): ElemCount {
+  const elemCount: ElemCount = {};
+  for (const pair in pairCount) {
+    [pair[0], pair[1]].forEach((elem) => {
+      if (elemCount[elem] === undefined) {
+        elemCount[elem] = 0;
+      }
+      elemCount[elem] += pairCount[pair];
+    });
   }
-  res.push(polymer[polymer.length - 1]);
-  return res.join('');
+  elemCount[firstElem] += 1;
+  elemCount[lastElem] += 1;
+  for (const elem in elemCount) {
+    elemCount[elem] /= 2;
+  }
+  return elemCount;
+}
+
+function countPairs(polymer: string): PairCount {
+  let pairCount: PairCount = {};
+  for (let i = 0; i < polymer.length - 1; ++i) {
+    if (pairCount[polymer.slice(i, i + 2)] === undefined) {
+      pairCount[polymer.slice(i, i + 2)] = 0;
+    }
+    ++pairCount[polymer.slice(i, i + 2)];
+  }
+  return pairCount;
+}
+
+function applySteps(steps: number, polymer: string, rules: Rules): ElemCount {
+  let pairCount = countPairs(polymer);
+  for (let i = 0; i < steps; ++i) {
+    const newPairCount: PairCount = {};
+    for (const pair in pairCount) {
+      const insert = rules[pair];
+      if (insert !== undefined) {
+        const newPair1 = pair[0] + insert;
+        const newPair2 = insert + pair[1];
+
+        if (newPairCount[newPair1] === undefined) {
+          newPairCount[newPair1] = 0;
+        }
+        newPairCount[newPair1] += pairCount[pair];
+
+        if (newPairCount[newPair2] === undefined) {
+          newPairCount[newPair2] = 0;
+        }
+        newPairCount[newPair2] += pairCount[pair];
+      } else {
+        if (newPairCount[pair] === undefined) {
+          newPairCount[pair] = 0;
+        }
+        newPairCount[pair] += pairCount[pair];
+      }
+    }
+    pairCount = newPairCount;
+  }
+
+  return countElems(pairCount, polymer[0], polymer[polymer.length - 1]);
 }
 
 const f = await Deno.readTextFile('./14.txt');
@@ -37,9 +82,5 @@ const rules = rulesStr.split('\n').reduce((acc: Rules, line) => {
   return acc;
 }, {});
 
-let polymer = init;
-for (let i = 0; i < 10; ++i) {
-  polymer = applyStep(polymer, rules);
-}
-const counts10 = Object.values(elemCount(polymer)).sort((a, b) => a - b);
-console.log(counts10[counts10.length - 1] - counts10[0]);
+console.log(score(applySteps(10, init, rules)));
+console.log(score(applySteps(40, init, rules)));
